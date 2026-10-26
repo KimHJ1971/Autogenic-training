@@ -615,16 +615,100 @@ body {
   grid-column: span 2;
 }
 
-/* 슬라이더 컨트롤 */
-.control-row {
-  background: var(--bg-card);
-  border: 1px solid var(--border-glass);
-  padding: 14px 18px;
-  border-radius: var(--radius-md);
+/* 사운드 칩 선택 바 */
+.sound-selector-wrap {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
+.sound-selector-wrap::-webkit-scrollbar {
+  display: none;
+}
+
+.sound-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.sound-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+.sound-chip.selected {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #7dd3fc;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+}
+
+/* 음성 프리셋 그리드 */
+.voice-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.voice-preset-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.voice-preset-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+.voice-preset-btn.selected {
+  background: rgba(192, 132, 252, 0.18);
+  border-color: rgba(192, 132, 252, 0.45);
+  color: #e9d5ff;
+}
+
+.btn-test-voice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--c-prep);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-test-voice:hover {
+  background: rgba(56, 189, 248, 0.22);
+  transform: translateY(-1px);
+}
+
 
 .control-label-wrap {
   display: flex;

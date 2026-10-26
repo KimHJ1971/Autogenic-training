@@ -1,6 +1,6 @@
 /**
- * AudioEngine - Web Audio API 기반 순수 실시간 힐링 사운드 신시사이저
- * 외부 오디오 파일 다운로드 없이 브라우저 자체에서 부드럽고 맑은 소리를 합성합니다.
+ * AudioEngine - Web Audio API 기반 청명한 고품질 명상 사운드 신시사이저
+ * 외부 오디오 다운로드 없이 순수 브라우저 오디오 노드로 맑고 청아한 명상 사운드를 합성합니다.
  */
 class AudioEngine {
   constructor() {
@@ -10,9 +10,11 @@ class AudioEngine {
     this.bellGain = null;
     this.isPlayingAmbient = false;
     this.ambientNodes = [];
+    this.ambientType = 'crystal'; // 'crystal', 'chimes', 'stream'
     this.ambientVolume = 0.35;
-    this.bellVolume = 0.6;
+    this.bellVolume = 0.55;
     this.isDucked = false;
+    this.chimeTimer = null;
   }
 
   init() {
@@ -42,20 +44,20 @@ class AudioEngine {
   }
 
   /**
-   * 싱잉볼 (Tibetan Singing Bowl) 타종 사운드 합성
-   * 풍부한 배음(216Hz, 432Hz, 864Hz, 1296Hz)과 자연스러운 금속성 여운
+   * 청명한 크리스탈 싱잉볼 타종 사운드 (Crystal Singing Bowl Chime)
+   * 둔탁하지 않고 유리처럼 맑고 투명하게 울려 퍼지는 고음역 배음 합성
    */
-  playSingingBowl(freq = 432, duration = 4.5) {
+  playSingingBowl(freq = 528, duration = 5.0) {
     this.init();
     const now = this.ctx.currentTime;
 
-    // 배음 구조 (기본 주파수, 2차 배음, 3차 배음, 서브 하모닉)
+    // 솔페지오 528Hz(치유와 사랑의 주파수) 기반 맑은 크리스탈 배음 구조
     const harmonics = [
-      { ratio: 0.5, gain: 0.25, decay: duration * 1.1 },
-      { ratio: 1.0, gain: 0.55, decay: duration },
-      { ratio: 2.01, gain: 0.28, decay: duration * 0.75 },
-      { ratio: 3.03, gain: 0.12, decay: duration * 0.55 },
-      { ratio: 4.07, gain: 0.05, decay: duration * 0.35 }
+      { ratio: 1.0, gain: 0.50, decay: duration },          // 528Hz 맑은 기본음
+      { ratio: 1.5, gain: 0.25, decay: duration * 0.9 },    // 792Hz 맑은 완전5도
+      { ratio: 2.0, gain: 0.20, decay: duration * 0.8 },    // 1056Hz 영롱한 옥타브
+      { ratio: 2.76, gain: 0.12, decay: duration * 0.6 },   // 크리스탈 유리 배음
+      { ratio: 4.02, gain: 0.08, decay: duration * 0.45 }   // 청명한 잔향
     ];
 
     harmonics.forEach(h => {
@@ -65,18 +67,18 @@ class AudioEngine {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq * h.ratio, now);
 
-      // 미세 비브라토(금속 그릇 떨림)
+      // 맑은 미세 비브라토 (크리스탈 볼의 투명한 공명)
       const lfo = this.ctx.createOscillator();
       const lfoGain = this.ctx.createGain();
-      lfo.frequency.setValueAtTime(2.5, now);
-      lfoGain.gain.setValueAtTime(1.2, now);
+      lfo.frequency.setValueAtTime(3.2, now);
+      lfoGain.gain.setValueAtTime(1.8, now);
       lfo.connect(osc.frequency);
       lfo.start(now);
       lfo.stop(now + h.decay);
 
-      // 부드러운 어택 후 지수 감쇠
+      // 크리스탈 볼 타격 어택 & 긴 여운
       gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(h.gain * this.bellVolume, now + 0.06);
+      gain.gain.exponentialRampToValueAtTime(h.gain * this.bellVolume, now + 0.04);
       gain.gain.exponentialRampToValueAtTime(0.00001, now + h.decay);
 
       osc.connect(gain);
@@ -88,56 +90,183 @@ class AudioEngine {
   }
 
   /**
-   * 432Hz 이완 드론 + 6Hz 세타파 바이노럴 비트 + 핑크노이즈 밤바람 합성 시작
+   * 청명한 명상 배경 사운드 시작
+   * @param {string} type - 'crystal' (크리스탈 싱잉볼), 'chimes' (크리스탈 윈드차임), 'stream' (맑은 숲속 시냇물)
    */
-  startAmbient(soundType = 'theta') {
+  startAmbient(type = this.ambientType) {
     this.init();
     if (this.isPlayingAmbient) {
-      this.stopAmbient();
+      this.stopAmbient(0.4);
     }
 
     this.isPlayingAmbient = true;
+    this.ambientType = type;
     const now = this.ctx.currentTime;
     this.ambientNodes = [];
 
-    // 1. 드론 화음 (432Hz 이완 주파수 기반)
-    const baseFreq = 216; // 432의 옥타브 아래
-    const freqs = [baseFreq, baseFreq * 1.5, baseFreq * 2]; // 으뜸음, 완전5도, 옥타브
+    if (type === 'crystal') {
+      this._buildCrystalAmbient(now);
+    } else if (type === 'chimes') {
+      this._buildChimesAmbient(now);
+    } else if (type === 'stream') {
+      this._buildStreamAmbient(now);
+    }
+  }
 
-    freqs.forEach((f, idx) => {
+  /**
+   * 사운드 1: 청명한 528Hz & 432Hz 크리스탈 싱잉볼 지속 공명
+   */
+  _buildCrystalAmbient(now) {
+    // 528Hz(치유), 432Hz(안정), 648Hz(영롱한 5도)
+    const tones = [
+      { f: 528, gain: 0.14, pan: -0.3, detune: 0 },
+      { f: 534, gain: 0.12, pan: 0.3, detune: 6 }, // 6Hz 세타파 바이노럴 비트
+      { f: 432, gain: 0.10, pan: -0.2, detune: 0 },
+      { f: 660, gain: 0.05, pan: 0.2, detune: 0 }
+    ];
+
+    tones.forEach(t => {
       const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
       const filter = this.ctx.createBiquadFilter();
-      const oscGain = this.ctx.createGain();
 
-      osc.type = idx === 0 ? 'sine' : 'triangle';
-      osc.frequency.setValueAtTime(f, now);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(t.f, now);
 
-      // 따뜻한 톤을 위한 로우패스 필터
+      // 부드러운 위상 요동 (잔잔한 호흡 같은 변조)
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      lfo.frequency.setValueAtTime(0.08, now);
+      lfoGain.gain.setValueAtTime(1.2, now);
+      lfo.connect(osc.frequency);
+      lfo.start();
+      this.ambientNodes.push(lfo);
+
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(450, now);
+      filter.frequency.setValueAtTime(1200, now);
 
-      // 미세한 위상 변화
-      const detuneOsc = this.ctx.createOscillator();
-      const detuneGain = this.ctx.createGain();
-      detuneOsc.frequency.setValueAtTime(0.1 + idx * 0.05, now);
-      detuneGain.gain.setValueAtTime(1.5, now);
-      detuneOsc.connect(osc.frequency);
-      detuneOsc.start();
-      this.ambientNodes.push(detuneOsc);
-
-      const targetGain = 0.15 / (idx + 1);
-      oscGain.gain.setValueAtTime(0.0001, now);
-      oscGain.gain.linearRampToValueAtTime(targetGain, now + 3);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(t.gain, now + 3);
 
       osc.connect(filter);
-      filter.connect(oscGain);
-      oscGain.connect(this.ambientGain);
+      filter.connect(gain);
+      gain.connect(this.ambientGain);
 
       osc.start();
-      this.ambientNodes.push(osc, filter, oscGain);
+      this.ambientNodes.push(osc, filter, gain);
     });
 
-    // 2. 부드러운 밤바람/파도 앰비언스 (핑크 노이즈 버퍼)
+    // 맑은 숲속 숨결 (초저음 로우패스 핑크노이즈)
+    this._addGentleBreeze(now, 180, 0.08);
+  }
+
+  /**
+   * 사운드 2: 청아한 크리스탈 윈드차임 & 산들바람
+   */
+  _buildChimesAmbient(now) {
+    // 따뜻하고 맑은 숲속 바람
+    this._addGentleBreeze(now, 320, 0.12);
+
+    // 잔잔한 432Hz 배경 패드
+    const padOsc = this.ctx.createOscillator();
+    const padGain = this.ctx.createGain();
+    padOsc.type = 'sine';
+    padOsc.frequency.setValueAtTime(432, now);
+    padGain.gain.setValueAtTime(0.0001, now);
+    padGain.gain.linearRampToValueAtTime(0.08, now + 2);
+    padOsc.connect(padGain);
+    padGain.connect(this.ambientGain);
+    padOsc.start();
+    this.ambientNodes.push(padOsc, padGain);
+
+    // 주기적으로 산들바람에 찰랑거리는 영롱한 크리스탈 차임 멜로디
+    const chimeFreqs = [1584, 1760, 2112, 2376, 2640, 3168]; // 고음역 펜타토닉 맑은 종소리
+    const playRandomChime = () => {
+      if (!this.isPlayingAmbient || this.ambientType !== 'chimes') return;
+      const tNow = this.ctx.currentTime;
+      const f = chimeFreqs[Math.floor(Math.random() * chimeFreqs.length)];
+      
+      const cOsc = this.ctx.createOscillator();
+      const cGain = this.ctx.createGain();
+      cOsc.type = 'sine';
+      cOsc.frequency.setValueAtTime(f, tNow);
+
+      cGain.gain.setValueAtTime(0.0001, tNow);
+      cGain.gain.exponentialRampToValueAtTime(0.035 * this.ambientVolume, tNow + 0.02);
+      cGain.gain.exponentialRampToValueAtTime(0.00001, tNow + 2.8);
+
+      cOsc.connect(cGain);
+      cGain.connect(this.masterGain);
+
+      cOsc.start(tNow);
+      cOsc.stop(tNow + 3.0);
+
+      // 3~7초 간격으로 불규칙하게 바람결에 흩날림
+      const nextDelay = 3500 + Math.random() * 4000;
+      this.chimeTimer = setTimeout(playRandomChime, nextDelay);
+    };
+
+    this.chimeTimer = setTimeout(playRandomChime, 1500);
+  }
+
+  /**
+   * 사운드 3: 청명한 숲속 맑은 시냇물 소리
+   */
+  _buildStreamAmbient(now) {
+    const bufferSize = this.ctx.sampleRate * 2;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.3;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+
+    // 맑은 물방울 대역 필터 (대역 통과 Bandpass)
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(650, now);
+    filter.Q.setValueAtTime(1.8, now);
+
+    // 물 흐름 요동 LFO
+    const lfo = this.ctx.createOscillator();
+    const lfoGain = this.ctx.createGain();
+    lfo.frequency.setValueAtTime(0.25, now);
+    lfoGain.gain.setValueAtTime(220, now);
+    lfo.connect(filter.frequency);
+    lfo.start();
+    this.ambientNodes.push(lfo);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.18, now + 3);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ambientGain);
+
+    noise.start();
+    this.ambientNodes.push(noise, filter, gain);
+
+    // 528Hz 평온한 저음 앰비언트 결합
+    const tone = this.ctx.createOscillator();
+    const toneGain = this.ctx.createGain();
+    tone.type = 'sine';
+    tone.frequency.setValueAtTime(264, now); // 528Hz 옥타브 아래
+    toneGain.gain.setValueAtTime(0.0001, now);
+    toneGain.gain.linearRampToValueAtTime(0.06, now + 3);
+    tone.connect(toneGain);
+    toneGain.connect(this.ambientGain);
+    tone.start();
+    this.ambientNodes.push(tone, toneGain);
+  }
+
+  /**
+   * 부드러운 산들바람(핑크 노이즈 필터) 생성 보조 함수
+   */
+  _addGentleBreeze(now, cutoff = 240, targetGain = 0.1) {
     const bufferSize = this.ctx.sampleRate * 2;
     const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
@@ -150,38 +279,28 @@ class AudioEngine {
       b3 = 0.86650 * b3 + white * 0.3104856;
       b4 = 0.55000 * b4 + white * 0.5329522;
       b5 = -0.7616 * b5 - white * 0.0168980;
-      output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.04;
+      output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.035;
       b6 = white * 0.115926;
     }
 
-    const whiteNoise = this.ctx.createBufferSource();
-    whiteNoise.buffer = noiseBuffer;
-    whiteNoise.loop = true;
+    const source = this.ctx.createBufferSource();
+    source.buffer = noiseBuffer;
+    source.loop = true;
 
-    // 파도처럼 오르내리는 필터
-    const noiseFilter = this.ctx.createBiquadFilter();
-    noiseFilter.type = 'lowpass';
-    noiseFilter.frequency.setValueAtTime(220, now);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(cutoff, now);
 
-    // 숨결 같은 LFO (0.12Hz = 8초 주기 호흡)
-    const breathLfo = this.ctx.createOscillator();
-    const breathGain = this.ctx.createGain();
-    breathLfo.frequency.setValueAtTime(0.12, now);
-    breathGain.gain.setValueAtTime(140, now);
-    breathLfo.connect(noiseFilter.frequency);
-    breathLfo.start();
-    this.ambientNodes.push(breathLfo);
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(targetGain, now + 3);
 
-    const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.0001, now);
-    noiseGain.gain.linearRampToValueAtTime(0.2, now + 4);
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ambientGain);
 
-    whiteNoise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(this.ambientGain);
-
-    whiteNoise.start();
-    this.ambientNodes.push(whiteNoise, noiseFilter, noiseGain);
+    source.start();
+    this.ambientNodes.push(source, filter, gain);
   }
 
   /**
@@ -190,6 +309,11 @@ class AudioEngine {
   stopAmbient(fadeSec = 2.0) {
     if (!this.isPlayingAmbient || !this.ctx) return;
     this.isPlayingAmbient = false;
+
+    if (this.chimeTimer) {
+      clearTimeout(this.chimeTimer);
+      this.chimeTimer = null;
+    }
 
     const now = this.ctx.currentTime;
     if (this.ambientGain) {
@@ -211,10 +335,7 @@ class AudioEngine {
     }, fadeSec * 1000 + 50);
   }
 
-  /**
-   * 음성 낭독 시 배경음 살짝 낮추기 (Ducking)
-   */
-  duck(targetMultiplier = 0.35, duration = 0.6) {
+  duck(targetMultiplier = 0.30, duration = 0.5) {
     if (!this.ctx || !this.ambientGain || !this.isPlayingAmbient) return;
     const now = this.ctx.currentTime;
     this.ambientGain.gain.cancelScheduledValues(now);
@@ -223,9 +344,6 @@ class AudioEngine {
     this.isDucked = true;
   }
 
-  /**
-   * 낭독 후 침묵/이완 시간 동안 배경음 다시 복원
-   */
   unduck(duration = 1.2) {
     if (!this.ctx || !this.ambientGain || !this.isPlayingAmbient) return;
     const now = this.ctx.currentTime;
@@ -250,5 +368,4 @@ class AudioEngine {
   }
 }
 
-// 싱글톤 노출
 window.audioEngine = new AudioEngine();
