@@ -689,25 +689,119 @@ body {
   color: #e9d5ff;
 }
 
-.btn-test-voice {
+/* 여성 음성 캐릭터 카드 그리드 */
+.voice-character-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.voice-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.voice-card:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+.voice-card.selected {
+  background: rgba(192, 132, 252, 0.15);
+  border-color: rgba(192, 132, 252, 0.5);
+  box-shadow: 0 4px 20px rgba(192, 132, 252, 0.18);
+}
+
+.voice-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.voice-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.voice-card-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.voice-card-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+
+.voice-card.selected .voice-card-badge {
+  background: rgba(192, 132, 252, 0.25);
+  color: #e9d5ff;
+}
+
+.voice-card-desc {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.btn-card-preview {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-glass);
+  color: var(--text-main);
+  border-radius: var(--radius-full);
+  padding: 8px 14px;
+  font-size: 0.74rem;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  color: var(--c-prep);
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-  font-size: 0.78rem;
-  font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
-.btn-test-voice:hover {
-  background: rgba(56, 189, 248, 0.22);
-  transform: translateY(-1px);
+.btn-card-preview:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  transform: scale(1.04);
 }
+
+.btn-card-preview:active {
+  transform: scale(0.98);
+}
+
+.btn-card-preview.playing {
+  background: rgba(192, 132, 252, 0.25);
+  border-color: rgba(192, 132, 252, 0.5);
+  color: #e9d5ff;
+  animation: pulsePreview 1.2s infinite;
+}
+
+@keyframes pulsePreview {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 
 
 .control-label-wrap {

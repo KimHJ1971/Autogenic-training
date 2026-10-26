@@ -1,5 +1,6 @@
 /**
- * VoiceGuide - 자율훈련법 음성 안내 및 시퀀스 오케스트레이터 (여성스럽고 다정한 톤 강화)
+ * VoiceGuide - 자율훈련법 음성 안내 및 시퀀스 오케스트레이터
+ * 구글, 마이크로소프트, 애플 등 다양한 여성 목소리 및 4가지 고품질 여성 보이스 프로필 지원
  */
 
 // 자율훈련법 단계별 스크립트 데이터 (더 부드럽고 친절한 여성 명상 지도자 어조)
@@ -138,13 +139,58 @@ const AUTOGENIC_STAGES = [
   }
 ];
 
+// 4가지 특화 여성 보이스 프로필 정의 (구글, MS, 애플 등 브라우저 음성 엔진 연동)
+const FEMALE_VOICE_PROFILES = [
+  {
+    id: 'google_warm',
+    name: '구글 스타일: 맑고 다정한 여성 톤',
+    badge: 'Google Warm Female',
+    desc: '맑고 온화한 음색으로 친절하고 다정하게 안내합니다.',
+    preferredKeywords: ['Google', '한국의', 'Korean', 'kr'],
+    pitch: 1.14,
+    rate: 0.80,
+    previewText: '마음이 아주 차분해지고 있습니다. 온몸이 따뜻하고 편안합니다.'
+  },
+  {
+    id: 'ms_calm',
+    name: '선희/헤미 스타일: 차분한 수면 톤',
+    badge: 'Calm Bedtime',
+    desc: '속삭이듯 조용하고 포근하여 밤에 잠들기 좋은 음색입니다.',
+    preferredKeywords: ['SunHi', 'Heami', '헤미', '선희', 'Natural'],
+    pitch: 1.04,
+    rate: 0.76,
+    previewText: '온몸의 긴장이 풀려나갑니다. 그대로 편안하게 잠에 드세요.'
+  },
+  {
+    id: 'meditation_clear',
+    name: '명상 강사 스타일: 청아하고 맑은 톤',
+    badge: 'Meditation Master',
+    desc: '맑고 또렷하면서도 깊은 이완을 이끄는 전문 명상 지도자 음색입니다.',
+    preferredKeywords: ['Yuna', '유나', 'Female'],
+    pitch: 1.20,
+    rate: 0.82,
+    previewText: '양팔과 양다리가 아주 무겁습니다. 깊은 평온을 느껴보세요.'
+  },
+  {
+    id: 'natural_soft',
+    name: '내추럴 스타일: 자연스럽고 편안한 톤',
+    badge: 'Natural Balance',
+    desc: '자연스러운 억양으로 오래 들어도 귀가 편안한 기본 음색입니다.',
+    preferredKeywords: [],
+    pitch: 1.08,
+    rate: 0.80,
+    previewText: '호흡이 지극히 편안합니다. 숨이 저절로 부드럽게 쉬어집니다.'
+  }
+];
+
 class VoiceGuide {
   constructor() {
     this.synth = window.speechSynthesis;
     this.voices = [];
     this.selectedVoice = null;
-    this.speechRate = 0.80;   // 차분하고 포근한 속도
-    this.speechPitch = 1.08;  // 부드럽고 다정한 여성 톤 (기존 0.95 -> 1.08)
+    this.currentProfileId = 'google_warm';
+    this.speechRate = 0.80;
+    this.speechPitch = 1.14;
     this.mode = 'sleep';
     this.coursePreset = 'standard';
     this.silenceMultiplier = 1.0;
@@ -163,6 +209,7 @@ class VoiceGuide {
     this.onProgressUpdate = null;
     this.onComplete = null;
     this.onCountdownTick = null;
+    this.onVoicesReady = null;
 
     this.initVoices();
   }
@@ -170,35 +217,34 @@ class VoiceGuide {
   initVoices() {
     const updateVoices = () => {
       const allVoices = this.synth.getVoices();
-      // 한국어 음성 필터
       this.voices = allVoices.filter(v => v.lang.startsWith('ko') || v.lang.includes('KR'));
-      
-      if (this.voices.length > 0) {
-        // 여성 음성 최우선 선택 로직 (Yuna, SunHi, Heami, Google 한국어, Natural, Female 등)
-        const femaleVoice = this.voices.find(v => 
-          v.name.includes('Yuna') || 
-          v.name.includes('SunHi') || 
-          v.name.includes('Heami') || 
-          v.name.includes('혜미') ||
-          v.name.includes('유나') ||
-          v.name.includes('선희') ||
-          v.name.includes('Google 한국의') ||
-          v.name.includes('Google 한국어') ||
-          v.name.includes('Female') ||
-          v.name.includes('Natural')
-        );
-        this.selectedVoice = femaleVoice || this.voices[0];
+
+      // 브라우저에 한국어 음성이 명시되지 않은 경우 전체 음성 fallback
+      if (this.voices.length === 0 && allVoices.length > 0) {
+        this.voices = allVoices;
       }
+
+      this.applyProfile(this.currentProfileId, false);
+      if (this.onVoicesReady) this.onVoicesReady(this.voices);
     };
 
     updateVoices();
     if (speechSynthesis.onvoiceschanged !== undefined) {
       speechSynthesis.onvoiceschanged = updateVoices;
     }
+
+    // 일부 모바일/브라우저 지연 로드 대응 (폴링)
+    setTimeout(updateVoices, 300);
+    setTimeout(updateVoices, 800);
+    setTimeout(updateVoices, 1500);
   }
 
   getVoices() {
     return this.voices;
+  }
+
+  getProfiles() {
+    return FEMALE_VOICE_PROFILES;
   }
 
   setVoice(voiceURI) {
@@ -227,34 +273,63 @@ class VoiceGuide {
   }
 
   /**
-   * 음성 톤 프리셋 변경
-   * @param {string} type - 'gentle_female' (다정한 여성), 'calm_female' (차분한 여성), 'natural' (자연스러운 기본)
+   * 여성 보이스 프로필 적용
    */
-  setTonePreset(type) {
-    if (type === 'gentle_female') {
-      this.speechPitch = 1.12;
-      this.speechRate = 0.80;
-    } else if (type === 'calm_female') {
-      this.speechPitch = 1.05;
-      this.speechRate = 0.78;
-    } else {
-      this.speechPitch = 1.00;
-      this.speechRate = 0.82;
+  applyProfile(profileId, updateAudioSettings = true) {
+    const profile = FEMALE_VOICE_PROFILES.find(p => p.id === profileId) || FEMALE_VOICE_PROFILES[0];
+    this.currentProfileId = profile.id;
+
+    if (updateAudioSettings) {
+      this.speechPitch = profile.pitch;
+      this.speechRate = profile.rate;
     }
+
+    // 선호 음성 엔진 키워드 매칭
+    if (this.voices.length > 0) {
+      let matchedVoice = null;
+      for (const kw of profile.preferredKeywords) {
+        matchedVoice = this.voices.find(v => v.name.includes(kw));
+        if (matchedVoice) break;
+      }
+      if (!matchedVoice) {
+        // 일반 여성 음성 탐색
+        matchedVoice = this.voices.find(v => 
+          v.name.includes('Yuna') || 
+          v.name.includes('SunHi') || 
+          v.name.includes('Heami') || 
+          v.name.includes('Google') || 
+          v.name.includes('Female')
+        );
+      }
+      this.selectedVoice = matchedVoice || this.voices[0];
+    }
+
+    return profile;
   }
 
   /**
-   * 현재 음성 설정으로 미리듣기 테스트
+   * 특정 프로필 또는 현재 설정으로 미리듣기 발화
    */
-  testVoice(onEnd) {
+  previewVoice(profileId = this.currentProfileId, onEnd) {
     this.synth.cancel();
-    const testText = '마음이 아주 차분해지고 있습니다. 온몸이 따뜻하고 편안합니다.';
-    const utter = new SpeechSynthesisUtterance(testText);
+    const profile = FEMALE_VOICE_PROFILES.find(p => p.id === profileId) || FEMALE_VOICE_PROFILES[0];
+    
+    // 임시 적용
+    this.applyProfile(profile.id, true);
+
+    const utter = new SpeechSynthesisUtterance(profile.previewText);
     if (this.selectedVoice) utter.voice = this.selectedVoice;
     utter.rate = this.speechRate;
     utter.pitch = this.speechPitch;
     utter.lang = 'ko-KR';
-    if (onEnd) utter.onend = onEnd;
+
+    utter.onend = () => {
+      if (onEnd) onEnd();
+    };
+    utter.onerror = () => {
+      if (onEnd) onEnd();
+    };
+
     this.synth.speak(utter);
   }
 
@@ -322,7 +397,6 @@ class VoiceGuide {
     this.currentStageIndex = 0;
     this.currentSentenceIndex = 0;
 
-    // 배경음 재생 시작
     if (window.audioEngine) {
       window.audioEngine.startAmbient();
       window.audioEngine.playSingingBowl(528, 5.0);
@@ -358,7 +432,6 @@ class VoiceGuide {
 
     const stage = this.activeStages[this.currentStageIndex];
     if (this.currentSentenceIndex === 0) {
-      // 단계 변경 시 청명한 크리스탈 싱잉볼 타종
       if (window.audioEngine) {
         const bowlFreq = 528 + (this.currentStageIndex % 5) * 44;
         window.audioEngine.playSingingBowl(bowlFreq, 4.5);

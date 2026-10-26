@@ -44,9 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const modeAwakeCard = document.getElementById('modeAwakeCard');
   const courseCards = document.querySelectorAll('.course-choice-card');
 
+  // 여성 음성 캐릭터 카드 & 프리뷰
+  const voiceCards = document.querySelectorAll('.voice-card');
+  const previewBtns = document.querySelectorAll('.btn-card-preview');
   const voiceSelect = document.getElementById('voiceSelect');
-  const testVoiceBtn = document.getElementById('testVoiceBtn');
-  const voicePresetBtns = document.querySelectorAll('.voice-preset-btn');
   const speechPitchSlider = document.getElementById('speechPitchSlider');
   const speechPitchVal = document.getElementById('speechPitchVal');
   const speechRateSlider = document.getElementById('speechRateSlider');
@@ -71,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentMode = localStorage.getItem('at_mode') || 'sleep';
   let currentCourse = localStorage.getItem('at_course') || 'standard';
   let currentSound = localStorage.getItem('at_sound') || 'crystal';
+  let currentProfileId = localStorage.getItem('at_voice_profile') || 'google_warm';
   let prepSeconds = parseInt(localStorage.getItem('at_prep_sec') || '10', 10);
   let wakeLock = null;
 
@@ -168,13 +170,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 4. 음성 설정 리스너 & 여성 목소리 탐색
+  // 4. 여성 음성 프로필 & 드롭다운 리스너
+  function updateVoiceProfileUI(profileId, applySoundSettings = true) {
+    currentProfileId = profileId;
+    voiceCards.forEach(card => {
+      if (card.getAttribute('data-profile') === profileId) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
+
+    const profile = window.voiceGuide.applyProfile(profileId, applySoundSettings);
+
+    if (applySoundSettings && profile) {
+      speechPitchSlider.value = profile.pitch;
+      speechPitchVal.textContent = `${profile.pitch}x`;
+      speechRateSlider.value = profile.rate;
+      speechRateVal.textContent = `${profile.rate}x`;
+    }
+
+    localStorage.setItem('at_voice_profile', profileId);
+    syncVoiceSelectWithSelected();
+  }
+
+  function syncVoiceSelectWithSelected() {
+    if (window.voiceGuide.selectedVoice) {
+      voiceSelect.value = window.voiceGuide.selectedVoice.voiceURI;
+    }
+  }
+
+  // 카드 클릭 시 프로필 선택
+  voiceCards.forEach(card => {
+    card.addEventListener('click', (e) => {
+      // 들어보기 버튼 클릭은 별도 처리
+      if (e.target.closest('.btn-card-preview')) return;
+      const pid = card.getAttribute('data-profile');
+      updateVoiceProfileUI(pid, true);
+    });
+  });
+
+  // 각 카드의 [들어보기] 버튼 클릭
+  previewBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const pid = btn.getAttribute('data-preview-profile');
+      updateVoiceProfileUI(pid, true);
+
+      // 버튼 애니메이션
+      previewBtns.forEach(b => b.classList.remove('playing'));
+      btn.classList.add('playing');
+
+      window.voiceGuide.previewVoice(pid, () => {
+        btn.classList.remove('playing');
+      });
+    });
+  });
+
   function populateVoiceList() {
     const voices = window.voiceGuide.getVoices();
     voiceSelect.innerHTML = '';
     if (voices.length === 0) {
       const opt = document.createElement('option');
-      opt.textContent = '한국어 음성 탐색 중...';
+      opt.textContent = '브라우저 음성 로드 중...';
       voiceSelect.appendChild(opt);
       return;
     }
@@ -182,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
     voices.forEach((v) => {
       const opt = document.createElement('option');
       opt.value = v.voiceURI;
-      const isFemale = v.name.includes('Yuna') || v.name.includes('SunHi') || v.name.includes('Heami') || v.name.includes('Female');
+      const isFemale = v.name.includes('Yuna') || v.name.includes('SunHi') || v.name.includes('Heami') || v.name.includes('Female') || v.name.includes('Google');
       opt.textContent = `${v.name} (${v.lang})${isFemale ? ' [여성]' : ''}`;
       if (window.voiceGuide.selectedVoice && window.voiceGuide.selectedVoice.voiceURI === v.voiceURI) {
         opt.selected = true;
@@ -191,42 +249,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  window.voiceGuide.onVoicesReady = () => {
+    populateVoiceList();
+    syncVoiceSelectWithSelected();
+  };
+
   setTimeout(populateVoiceList, 400);
-  if (speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = populateVoiceList;
-  }
 
   voiceSelect.addEventListener('change', (e) => {
     window.voiceGuide.setVoice(e.target.value);
-  });
-
-  // 여성 음성 톤 프리셋
-  voicePresetBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      voicePresetBtns.forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      const preset = btn.getAttribute('data-preset');
-      window.voiceGuide.setTonePreset(preset);
-
-      // 슬라이더 UI 동기화
-      speechPitchSlider.value = window.voiceGuide.speechPitch;
-      speechPitchVal.textContent = `${window.voiceGuide.speechPitch}x`;
-      speechRateSlider.value = window.voiceGuide.speechRate;
-      speechRateVal.textContent = `${window.voiceGuide.speechRate}x`;
-
-      localStorage.setItem('at_pitch', window.voiceGuide.speechPitch);
-      localStorage.setItem('at_rate', window.voiceGuide.speechRate);
-    });
-  });
-
-  // 음성 미리듣기
-  testVoiceBtn.addEventListener('click', () => {
-    testVoiceBtn.disabled = true;
-    testVoiceBtn.style.opacity = '0.6';
-    window.voiceGuide.testVoice(() => {
-      testVoiceBtn.disabled = false;
-      testVoiceBtn.style.opacity = '1';
-    });
   });
 
   speechPitchSlider.addEventListener('input', (e) => {
@@ -468,6 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 초기화 실행
   updateSoundUI(currentSound);
+  updateVoiceProfileUI(currentProfileId, false);
   updateModeUI();
   updateCourseUI();
   updateStatsUI();
