@@ -1,0 +1,18 @@
+{
+  "name": "자율훈련법 편안한 음성안내 (Autogenic Training)",
+  "short_name": "자율훈련법",
+  "description": "누워서 편안하게 음성을 들으며 몸과 마음을 깊이 이완하는 정통 슐츠 자율훈련법 6단계 음성 가이드 앱",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#060913",
+  "theme_color": "#060913",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

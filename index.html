@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>자율훈련법 편안한 음성안내 (Autogenic Training)</title>
+  
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#060913">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="자율훈련법">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+
+  <!-- Google Fonts: Plus Jakarta Sans & Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 앰비언트 오로라 배경 -->
+  <div class="bg-ambient">
+    <div class="aurora-circle aurora-1"></div>
+    <div class="aurora-circle aurora-2"></div>
+  </div>
+
+  <!-- 메인 앱 컨테이너 -->
+  <div class="app-container">
+    <!-- 헤더 -->
+    <header class="app-header">
+      <div class="brand">
+        <img src="icon.svg" alt="자율훈련법 아이콘" class="brand-icon">
+        <div class="brand-text">
+          <h1>자율훈련법</h1>
+          <p>Autogenic Training · 친절한 음성가이드</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="wake-lock-pill" title="화면 꺼짐 방지 자동 활성화">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          수면 유지
+        </span>
+      </div>
+    </header>
+
+    <!-- ===================================================================
+         탭 1: 훈련 세션 (Main Session View)
+         =================================================================== -->
+    <main id="tab-session" class="tab-panel active">
+      <!-- 상단 모드 & 코스 상태 바 -->
+      <section class="session-status-bar">
+        <span id="modeBadge" class="mode-badge">🌙 수면 유도 모드</span>
+        <span id="courseInfo" class="course-info">🌿 3~5분 표준 정통 코스</span>
+      </section>
+
+      <!-- 중앙 바이오 펄스 호흡 링 & 포커스 스테이지 -->
+      <section class="pulse-stage-wrap">
+        <!-- 준비 카운트다운 오버레이 -->
+        <div id="countdownOverlay" class="countdown-overlay">
+          <div id="countdownNumber" class="countdown-number">10</div>
+          <div class="countdown-label">자리에 편안히 누워 자세를 정돈하세요</div>
+        </div>
+
+        <div class="breathe-ring-outer">
+          <div id="breatheRing" class="breathe-ring"></div>
+          <div class="pulse-inner">
+            <span id="stageStepTag" class="stage-step-tag">READY</span>
+            <h2 id="stageNameDisplay" class="stage-name-display">준비단계</h2>
+            <p id="stageOrganDisplay" class="stage-organ-display">시작을 눌러주세요</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 현재 공식 및 낭독 문구 카드 -->
+      <section class="session-card">
+        <div id="formulaQuote" class="stage-formula-quote">
+          공식 <span>"마음이 차분해지고 있다. 평온한 초원에 누워 있다."</span>
+        </div>
+        <div id="currentSpeechBubble" class="current-speech-bubble">
+          아래의 재생 버튼을 누르면 누워서 편안하게 들으실 수 있는 친절한 음성 안내가 시작됩니다.
+        </div>
+
+        <!-- 진행 프로그레스 바 -->
+        <div class="stage-progress-bar-wrap">
+          <div class="progress-track">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+          <div class="progress-meta">
+            <span id="progressPercent">0%</span>
+            <span>문장 <span id="currentSentenceIdx">0</span> / <span id="totalSentencesCount">0</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 조작 컨트롤 바 -->
+      <section class="controls-wrap">
+        <button id="prevBtn" class="btn-ctrl btn-step" aria-label="이전 단계" title="이전 단계">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="19 20 9 12 19 4 19 20"></polygon>
+            <line x1="5" y1="19" x2="5" y2="5"></line>
+          </svg>
+        </button>
+
+        <button id="playBtn" class="btn-ctrl btn-main-play" aria-label="훈련 시작/일시정지" title="재생/일시정지">
+          <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="6 3 20 12 6 21 6 3"></polygon>
+          </svg>
+          <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+        </button>
+
+        <button id="nextBtn" class="btn-ctrl btn-step" aria-label="다음 단계" title="다음 단계">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 4 15 12 5 20 5 4"></polygon>
+            <line x1="19" y1="5" x2="19" y2="19"></line>
+          </svg>
+        </button>
+      </section>
+
+      <!-- 누워서 듣기: 암전 슬립 스크린 버튼 -->
+      <button id="toggleSleepScreenBtn" class="btn-sleep-screen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span>누워서 듣기: 화면 완전히 끄기 (OLED 암전 모드)</span>
+      </button>
+    </main>
+
+    <!-- ===================================================================
+         탭 2: 코스 & 음성 설정 (Settings View)
+         =================================================================== -->
+    <main id="tab-settings" class="tab-panel">
+      <!-- 마무리 모드 선택 -->
+      <section class="settings-section">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 14 14"></polyline>
+          </svg>
+          마무리 모드 선택
+        </h3>
+        <div class="choice-grid">
+          <div id="modeSleepCard" class="choice-card selected">
+            <div class="choice-title">
+              <span>🌙 수면 유도 모드</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <p class="choice-desc">소거 동작 없이 마지막에 온기와 함께 자연스러운 깊은 잠(수면)으로 편안하게 이행합니다.</p>
+          </div>
+
+          <div id="modeAwakeCard" class="choice-card">
+            <div class="choice-title">
+              <span>☀️ 일상 복귀 모드</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <p class="choice-desc">낮 시간 휴식 후 3단계 정통 소거 동작(주먹 쥐기·팔 굽히기·심호흡·눈 뜨기)으로 활력을 회복합니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 코스 프리셋 선택 -->
+      <section class="settings-section">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          코스 프리셋
+        </h3>
+        <div class="choice-grid">
+          <div class="choice-card course-choice-card" data-course="quick">
+            <div class="choice-title">
+              <span>⚡ 1~2분 퀵 코스</span>
+            </div>
+            <p class="choice-desc">플라우드 전사본 권장! 중량감·온열감·호흡 핵심만 1~2분 안에 빠르게 실시하는 약식 코스.</p>
+          </div>
+
+          <div class="choice-card course-choice-card selected" data-course="standard">
+            <div class="choice-title">
+              <span>🌿 3~5분 표준 정통 코스</span>
+            </div>
+            <p class="choice-desc">슐츠 정통 6단계를 알맞은 템포로 고르게 수행하는 가장 권장되는 표준 풀코스.</p>
+          </div>
+
+          <div class="choice-card course-choice-card choice-card-row" data-course="deep">
+            <div class="choice-title">
+              <span>🌌 8~10분 심층 수면 코스</span>
+            </div>
+            <p class="choice-desc">각 단계마다 3회 이상의 심호흡과 충분한 묵상 시간을 가져 불면증 완화에 탁월한 코스.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 음성 및 사운드 상세 튜닝 -->
+      <section class="settings-section">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          </svg>
+          음성 및 사운드 설정
+        </h3>
+
+        <!-- 목소리 선택 -->
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span>한국어 안내 목소리</span>
+          </div>
+          <select id="voiceSelect" class="select-box">
+            <option>브라우저 기본 한국어 음성</option>
+          </select>
+        </div>
+
+        <!-- 낭독 속도 -->
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span>음성 낭독 속도</span>
+            <span id="speechRateVal" class="control-val">0.82x</span>
+          </div>
+          <input id="speechRateSlider" type="range" class="range-slider" min="0.7" max="1.0" step="0.02" value="0.82">
+        </div>
+
+        <!-- 문장 간 침묵/묵상 간격 -->
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span>문장 사이 묵상 간격 (침묵 시간)</span>
+            <span id="silenceVal" class="control-val">5초</span>
+          </div>
+          <input id="silenceSlider" type="range" class="range-slider" min="3" max="10" step="1" value="5">
+        </div>
+
+        <!-- 시작 전 준비 대기 시간 -->
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span>시작 전 누워 자세 잡는 시간</span>
+            <span id="prepTimeVal" class="control-val">10초</span>
+          </div>
+          <input id="prepTimeSlider" type="range" class="range-slider" min="5" max="30" step="5" value="10">
+        </div>
+
+        <!-- 배경 명상 사운드 음량 -->
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span>432Hz 앰비언트 배경음 볼륨</span>
+            <span id="ambientVolVal" class="control-val">35%</span>
+          </div>
+          <input id="ambientVolSlider" type="range" class="range-slider" min="0" max="1" step="0.05" value="0.35">
+        </div>
+
+        <!-- 싱잉볼 벨 음량 -->
+        <div class="control-row">
+          <div class="control-label-wrap">
+            <span>싱잉볼 타종 벨 볼륨</span>
+            <span id="bellVolVal" class="control-val">60%</span>
+          </div>
+          <input id="bellVolSlider" type="range" class="range-slider" min="0" max="1" step="0.05" value="0.6">
+        </div>
+      </section>
+    </main>
+
+    <!-- ===================================================================
+         탭 3: 자율훈련법 가이드 및 전사본 기록 (Guide & Theory View)
+         =================================================================== -->
+    <main id="tab-guide" class="tab-panel">
+      <!-- 플라우드 전사본 핵심 요약 카드 -->
+      <article class="guide-card" style="border-color: rgba(245, 158, 11, 0.3);">
+        <div class="guide-card-header">
+          <div class="guide-card-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <h3 class="guide-card-title" style="color:#fbbf24;">플라우드 낭독 전사본의 핵심 실천 규칙</h3>
+        </div>
+        <p class="guide-text">
+          2026년 10월 25일 더숲아카데미하우스에서 직접 낭독하여 플라우드에 기록한 자율훈련법 지침입니다:
+        </p>
+        <div class="plaud-quote-box">
+          "자율훈련법 전체 과정을 다 실시하는데 걸리는 시간은 1회에서 2분이다. 길어도 3에서 4분 이내에 끝낸다. 하루에 전체 과정을 1, 2회 실시한다. 4회 이상은 실시하지 않는다."
+        </div>
+        <ul class="guide-points">
+          <li>
+            <div class="bullet-dot" style="background:#f59e0b;"></div>
+            <div><strong>사전 준비:</strong> 편하고 조용한 환경, 미리 화장실 다녀오기, 잠들기 좋은 복장, 손목시계는 풀고 스마트폰은 멀찍이 두기.</div>
+          </li>
+          <li>
+            <div class="bullet-dot" style="background:#f59e0b;"></div>
+            <div><strong>기본 누운 자세:</strong> 매트를 깔고 바닥이나 침대에 똑바로 눕습니다. 양쪽 다리는 골반 너비로 벌리고, 손바닥은 위를 향하도록 편안히 몸 옆에 둡니다.</div>
+          </li>
+          <li>
+            <div class="bullet-dot" style="background:#f59e0b;"></div>
+            <div><strong>배경 심상:</strong> "마음이 차분해지고 있다. 평온한 햇살이 가득한 초원에 편안하게 누워 있다."</div>
+          </li>
+          <li>
+            <div class="bullet-dot" style="background:#f59e0b;"></div>
+            <div><strong>맥박 주의 팁:</strong> 온열감 시 맥박이 심하게 뛰는 느낌이 들면, '따뜻한 온기가 들어온다'로 부드럽게 마음속 말을 전환합니다.</div>
+          </li>
+        </ul>
+      </article>
+
+      <!-- 자율훈련법 의학적 원리 -->
+      <article class="guide-card">
+        <div class="guide-card-header">
+          <div class="guide-card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </div>
+          <h3 class="guide-card-title">자율훈련법(Autogenic Training)이란?</h3>
+        </div>
+        <p class="guide-text">
+          독일의 정신의학자 요하네스 슐츠(J.H. Schultz) 박사가 1932년 창안한 서구 의학계 공인의 자기최면·자율신경 이완요법입니다.
+          간단한 언어적 자기암시를 통해 <strong>부교감 신경(이완/회복 모드)을 즉각 활성화</strong>하고, 말초혈관을 넓혀 스트레스 호르몬을 차단합니다.
+        </p>
+      </article>
+
+      <!-- 6단계 공식 상세 목록 -->
+      <section class="stages-list-wrap">
+        <h3 class="section-title">정통 6단계 공식 체계</h3>
+
+        <div class="stage-accordion-item">
+          <div class="stage-acc-header">
+            <div class="stage-acc-title">
+              <span class="stage-number-tag" style="color:var(--c-stage1);">STEP 1</span>
+              <span>중량감 (무게감) 연습</span>
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-dim);">골격근 이완</span>
+          </div>
+          <div class="stage-acc-body">
+            공식: <em>"오른팔이 아주 무겁다 → 왼팔이 무겁다 → 양다리가 무겁다"</em><br>
+            근육의 불필요한 긴장과 경직이 풀리며 중력에 몸을 맡기는 단계입니다.
+          </div>
+        </div>
+
+        <div class="stage-accordion-item">
+          <div class="stage-acc-header">
+            <div class="stage-acc-title">
+              <span class="stage-number-tag" style="color:var(--c-stage2);">STEP 2</span>
+              <span>온열감 (따뜻함) 연습</span>
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-dim);">말초혈관 확장</span>
+          </div>
+          <div class="stage-acc-body">
+            공식: <em>"오른팔이 따뜻하다 → 왼팔이 따뜻하다 → 양다리가 따뜻하다"</em><br>
+            혈관이 확장되고 혈류량이 증가하며 손발 끝의 피부 온도가 1~2도 상승합니다.
+          </div>
+        </div>
+
+        <div class="stage-accordion-item">
+          <div class="stage-acc-header">
+            <div class="stage-acc-title">
+              <span class="stage-number-tag" style="color:var(--c-stage3);">STEP 3</span>
+              <span>심장 조정 연습</span>
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-dim);">자율신경 안정</span>
+          </div>
+          <div class="stage-acc-body">
+            공식: <em>"심장이 조용하고 규칙적으로 뛰고 있다"</em><br>
+            심장 박동에 억지로 간섭하지 않고, 가슴의 자연스러운 고동을 평온하게 지켜봅니다.
+          </div>
+        </div>
+
+        <div class="stage-accordion-item">
+          <div class="stage-acc-header">
+            <div class="stage-acc-title">
+              <span class="stage-number-tag" style="color:var(--c-stage4);">STEP 4</span>
+              <span>호흡 조정 연습</span>
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-dim);">자연스러운 숨</span>
+          </div>
+          <div class="stage-acc-body">
+            공식: <em>"숨이 저절로 쉬어진다 / 호흡이 지극히 편안하다"</em><br>
+            의도적인 조절을 내려놓고 몸이 알아서 숨을 쉬는 상태에 머뭅니다.
+          </div>
+        </div>
+
+        <div class="stage-accordion-item">
+          <div class="stage-acc-header">
+            <div class="stage-acc-title">
+              <span class="stage-number-tag" style="color:var(--c-stage5);">STEP 5</span>
+              <span>복부 온열 연습</span>
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-dim);">태양신경총 이완</span>
+          </div>
+          <div class="stage-acc-body">
+            공식: <em>"배가 따뜻하다 / 명치 부위가 따뜻하다"</em><br>
+            위장 등 내장 기관을 관장하는 복부 신경총이 따뜻해지며 소화기와 복통이 안정됩니다.
+          </div>
+        </div>
+
+        <div class="stage-accordion-item">
+          <div class="stage-acc-header">
+            <div class="stage-acc-title">
+              <span class="stage-number-tag" style="color:var(--c-stage6);">STEP 6</span>
+              <span>두부 냉감 연습</span>
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-dim);">이마 청량감</span>
+          </div>
+          <div class="stage-acc-body">
+            공식: <em>"이마가 시원하다 / 머리가 맑고 쾌적하다"</em><br>
+            몸은 따뜻하지만 머리는 차가워지는 '두한족열(頭寒足熱)' 상태를 유도하여 잡념을 식힙니다.
+          </div>
+        </div>
+
+        <div class="stage-accordion-item">
+          <div class="stage-acc-header">
+            <div class="stage-acc-title">
+              <span class="stage-number-tag" style="color:var(--c-awake);">소거 동작</span>
+              <span>소거 (취소) 동작</span>
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-dim);">일상 복귀 시 필수</span>
+          </div>
+          <div class="stage-acc-body">
+            낮 시간 훈련 후에는 일상 활동을 위해 반드시 3단계 소거(주먹 쥐기 → 팔 굽혀펴기 → 심호흡 후 눈 뜨기)를 실시해야 멍함 없이 상쾌합니다. (수면 전에는 생략 가능)
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===================================================================
+         탭 4: 기록 및 루틴 통계 (Log & Routine View)
+         =================================================================== -->
+    <main id="tab-stats" class="tab-panel">
+      <!-- 통계 서머리 카드 그리드 -->
+      <section class="stat-summary-grid">
+        <div class="stat-box">
+          <span class="stat-label">오늘 실시 횟수</span>
+          <span id="statTodayCount" class="stat-num" style="color:var(--c-prep);">0회</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">누적 훈련 횟수</span>
+          <span id="statTotalCount" class="stat-num">0회</span>
+        </div>
+        <div class="stat-box" style="grid-column: span 2;">
+          <span class="stat-label">누적 이완 훈련 시간</span>
+          <span id="statTotalMinutes" class="stat-num" style="color:var(--c-stage2);">0분</span>
+        </div>
+      </section>
+
+      <!-- 루틴 알림 카드 -->
+      <section id="routineAlertMsg" class="routine-notice">
+        💡 오늘은 아직 훈련을 하지 않았습니다. 잠들기 전이나 낮 휴식에 1~2회 실시해보세요.
+      </section>
+
+      <!-- 최근 수행 기록 히스토리 -->
+      <section class="settings-section">
+        <h3 class="section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          최근 훈련 기록
+        </h3>
+        <div id="logHistoryList" class="log-history-list">
+          <div style="color:var(--text-dim);font-size:0.8rem;text-align:center;padding:12px;">아직 완료된 훈련 기록이 없습니다.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- OLED 트루 블랙 전체 암전 모드 (누워서 청취용) -->
+  <div id="trueBlackScreen" class="true-black-screen">
+    <div class="sleep-faint-hint">
+      화면 아무 곳이나 터치하면 화면이 켜집니다.<br>
+      소리 안내는 계속 진행 중입니다.
+    </div>
+  </div>
+
+  <!-- 하단 고정 탭 바 -->
+  <nav class="bottom-nav">
+    <div class="nav-inner">
+      <button class="nav-tab-btn active" data-tab="session">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polygon points="10 8 16 12 10 16 10 8"></polygon>
+        </svg>
+        <span>훈련 세션</span>
+      </button>
+
+      <button class="nav-tab-btn" data-tab="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>코스·설정</span>
+      </button>
+
+      <button class="nav-tab-btn" data-tab="guide">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+        <span>슐츠 가이드</span>
+      </button>
+
+      <button class="nav-tab-btn" data-tab="stats">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>기록·통계</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- 스크립트 로드 순서: AudioEngine -> VoiceGuide -> App Controller -->
+  <script src="audio-engine.js"></script>
+  <script src="voice-guide.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
